@@ -1,0 +1,19 @@
+.App {
+  text-align: center;
+  background:#333;
+  height:100vh;
+}
+
+.Canvas {
+    
+}
+
+.Circle{
+    fill:red;
+    stroke:black;
+    stroke-width:3px;
+}
+
+.Circle:hover { 
+    fill:rgb(255,127,127); 
+}
