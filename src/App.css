@@ -8,12 +8,16 @@
     
 }
 
-.Circle{
+.circle{
     fill:red;
     stroke:black;
     stroke-width:3px;
 }
 
-.Circle:hover { 
+.circle:hover { 
     fill:rgb(255,127,127); 
+}
+.circle.dragging{
+    fill:rgb(255,127,255); 
+    z-index:3;
 }
