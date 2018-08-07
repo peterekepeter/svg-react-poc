@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import './App.css';
 
 
+const AppMouseEvents = React.createContext();
 
 class App extends Component {
   render() {
@@ -57,8 +58,10 @@ const Canvas = props => {
         <svg className='Canvas' width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"
             onMouseMove={event => mousemove.dispatch(event.screenX, event.screenY)}
             onMouseUp={event => mouseup.dispatch(event.screenX, event.screenY)}>
-            <Reactangle uplisteners={mouseup} movelisteners={mousemove} />
-            <DragControl onChange={(x,y)=>console.log(x,y)} uplisteners={mouseup} movelisteners={mousemove}><circle cx="64" cy="128" r="16"/></DragControl>
+            <AppMouseEvents.Provider value={{mousemove, mouseup}}>
+                <Reactangle/>
+                <DragControl onChange={(x,y)=>console.log(x,y)}><circle cx="64" cy="128" r="16"/></DragControl>
+            </AppMouseEvents.Provider>
         </svg>
     );
 };
@@ -73,15 +76,15 @@ class Reactangle extends Component {
     }
     render(){
         return (
-            <g>
+            <DragControl delta={(x,y)=>this.setState({x:this.state.x+x,y:this.state.y+y})}>
                 <rect x={this.state.x} y={this.state.y} width={this.state.width} height={this.state.height} rx="15" ry="15" />
-                <ControlPoint mykey='up' uplisteners={this.props.uplisteners} movelisteners={this.props.movelisteners} 
+                <ControlPoint mykey='up' 
                     x={this.state.x} y={this.state.y}
                     onChange={(x,y) => this.setState({x,y})}/>
-                <ControlPoint mykey='down' uplisteners={this.props.uplisteners} movelisteners={this.props.movelisteners} 
+                <ControlPoint mykey='down'
                     x={this.state.x + this.state.width} y={this.state.y + this.state.height}
                     onChange={(x,y) => this.setState({width: x - this.state.x, height: y - this.state.y})}/>
-            </g>
+            </DragControl>
             
         );
     }
@@ -103,19 +106,27 @@ class DragControl extends Component {
             lastY:0,
             drag: false
         };
-        this.mouseHandler = event => this.dragStart(event.screenX, event.screenY);
+    }
+
+    onMouseDown(event, context){
+        if (this.props.capture == true){
+            event.stopPropagation();
+        }
+        this.context = context;
+        this.dragStart(event.screenX, event.screenY);
     }
 
     dragStart(x,y) {
         if (this.state.drag === true) return;
         if (this.movelistener == null) {
             this.movelistener = (x,y) => this.drag(x,y);
-            console.log(this.props);
-            this.props.movelisteners.push(this.movelistener)
+            this.mousemove = this.context.mousemove;
+            this.mousemove.push(this.movelistener)
         }
         if (this.uplistener == null) {
             this.uplistener = () => this.dragStop();
-            this.props.uplisteners.push(this.uplistener);
+            this.mouseup = this.context.mouseup;
+            this.mouseup.push(this.uplistener);
         }
         console.log('start',x,y);
         this.setState({ drag:true, dragX:x, dragY:y, lastX:x, lastY:y });
@@ -124,11 +135,11 @@ class DragControl extends Component {
     dragStop(){
         if (this.state.drag === false) return;
         if (this.movelistener != null){
-            this.props.movelisteners.remove(this.movelistener);
+            this.mousemove.remove(this.movelistener);
             this.movelistener = null;
         } 
         if (this.uplistener){
-            this.props.uplisteners.remove(this.uplistener);
+            this.mouseup.remove(this.uplistener);
             this.uplistener = null;
         }
         console.log('stop');
@@ -150,14 +161,18 @@ class DragControl extends Component {
     }
 
     render(){
-        return <g onDragStart={preventDefault} onMouseDown={this.mouseHandler}>{this.props.children}</g>;
+        
+        return (<AppMouseEvents.Consumer>{context => 
+            <g onDragStart={preventDefault} onMouseDown={event=>this.onMouseDown(event, context)}>
+                {this.props.children}
+            </g>
+        }</AppMouseEvents.Consumer>)
     }
 
 }
 
 const ControlPoint = props => (
-    <DragControl uplisteners={props.uplisteners} movelisteners={props.movelisteners} 
-        delta={(x,y)=>props.onChange(props.x+x, props.y+y)}>
+    <DragControl delta={(x,y)=>props.onChange(props.x+x, props.y+y)} capture>
         <circle className="circle" cx={props.x} cy={props.y} r="8"/>
     </DragControl>
 );
