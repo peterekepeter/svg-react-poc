@@ -21,3 +21,10 @@
     fill:rgb(255,127,255); 
     z-index:3;
 }
+
+
+rect{
+    fill:#47f;
+    stroke:black;
+    stroke-width:3px;
+}

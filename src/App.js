@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
 import './App.css';
 
+
+
 class App extends Component {
   render() {
     return (
@@ -36,7 +38,6 @@ class CoordEvent
     }
 
     dispatch(x,y){
-        console.log('dispatch',x,y);
         this.list.forEach(fn => fn(x,y));
     }
 }
@@ -47,7 +48,7 @@ const Canvas = props => {
     const mouseup = new CoordEvent();
     for (let i=0; i<100; i++) {
         list.push(
-            <Circle uplisteners={mouseup} movelisteners={mousemove} 
+            <ControlPoint uplisteners={mouseup} movelisteners={mousemove} 
                 x={Math.random()*1000} y={Math.random()*1000} key={i}/>
         );
     }
@@ -56,28 +57,60 @@ const Canvas = props => {
         <svg className='Canvas' width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"
             onMouseMove={event => mousemove.dispatch(event.screenX, event.screenY)}
             onMouseUp={event => mouseup.dispatch(event.screenX, event.screenY)}>
-            {list}
+            <Reactangle uplisteners={mouseup} movelisteners={mousemove} />
+            <DragControl onChange={(x,y)=>console.log(x,y)} uplisteners={mouseup} movelisteners={mousemove}><circle cx="64" cy="128" r="16"/></DragControl>
         </svg>
     );
 };
 
-class Circle extends Component {
+class Reactangle extends Component {
+    constructor(){
+        super();
+        this.state = {
+            x:64, y:64,
+            width:100, height:100
+        }
+    }
+    render(){
+        return (
+            <g>
+                <rect x={this.state.x} y={this.state.y} width={this.state.width} height={this.state.height} rx="15" ry="15" />
+                <ControlPoint mykey='up' uplisteners={this.props.uplisteners} movelisteners={this.props.movelisteners} 
+                    x={this.state.x} y={this.state.y}
+                    onChange={(x,y) => this.setState({x,y})}/>
+                <ControlPoint mykey='down' uplisteners={this.props.uplisteners} movelisteners={this.props.movelisteners} 
+                    x={this.state.x + this.state.width} y={this.state.y + this.state.height}
+                    onChange={(x,y) => this.setState({width: x - this.state.x, height: y - this.state.y})}/>
+            </g>
+            
+        );
+    }
+}
 
+function preventDefault(event) {
+    event.preventDefault();
+    return false;
+}
+
+class DragControl extends Component {
+    
     constructor(props){
         super();
         this.state = {
-            x: Number(props.x),
-            y: Number(props.y),
-            dragX: 0,
-            dragY: 0,
+            dragX:0,
+            dragY:0,
+            lastX:0,
+            lastY:0,
             drag: false
         };
+        this.mouseHandler = event => this.dragStart(event.screenX, event.screenY);
     }
-    
+
     dragStart(x,y) {
         if (this.state.drag === true) return;
         if (this.movelistener == null) {
             this.movelistener = (x,y) => this.drag(x,y);
+            console.log(this.props);
             this.props.movelisteners.push(this.movelistener)
         }
         if (this.uplistener == null) {
@@ -85,7 +118,7 @@ class Circle extends Component {
             this.props.uplisteners.push(this.uplistener);
         }
         console.log('start',x,y);
-        this.setState({ drag:true, dragX: x, dragY: y });
+        this.setState({ drag:true, dragX:x, dragY:y, lastX:x, lastY:y });
     }
 
     dragStop(){
@@ -104,26 +137,29 @@ class Circle extends Component {
 
     drag(x,y){
         if (this.state.drag === false) return;
-        const dx = x - this.state.dragX;
-        const dy = y- this.state.dragY;
-        console.log('drag', dx, dy);
-        this.setState({ x: this.state.x + dx, y: this.state.y + dy, dragX: x, dragY: y })
+        if (this.props.absolute){
+            this.props.absolute(x,y);
+        }
+        if (this.props.relative){
+            this.props.relative(x - this.state.dragX, y - this.state.dragY);
+        }
+        if (this.props.delta){
+            this.props.delta(x - this.state.lastX, y - this.state.lastY);
+        }
+        this.setState({lastX:x, lastY:y});
     }
 
-    
-    render() {
-        console.log('rennder', this.state);
-        const {x,y} = this.state;
-        const classlist = ['circle'];
-        if (this.state.drag) {
-            classlist.push('dragging');
-        }
-        return (
-            <circle className={classlist.join(' ')} cx={x} cy={y} r="40" draggging={this.state.drag}
-                onDragStart={(e)=>{e.preventDefault();}}
-                onMouseDown={event => this.dragStart(event.screenX, event.screenY)}/>
-        );
+    render(){
+        return <g onDragStart={preventDefault} onMouseDown={this.mouseHandler}>{this.props.children}</g>;
     }
+
 }
 
+const ControlPoint = props => (
+    <DragControl uplisteners={props.uplisteners} movelisteners={props.movelisteners} 
+        delta={(x,y)=>props.onChange(props.x+x, props.y+y)}>
+        <circle className="circle" cx={props.x} cy={props.y} r="8"/>
+    </DragControl>
+);
+            
 export default App;
