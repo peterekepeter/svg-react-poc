@@ -1,5 +1,5 @@
 import React from 'react';
-import { SvgCanvas, useMouseState } from '../SvgCanvas';
+import { SvgCanvas, useMouseState } from './SvgCanvas';
 
 const fixtures = () => { return {
     'SvgCanvas mouse state' : <TestCanvasMouseState/>
